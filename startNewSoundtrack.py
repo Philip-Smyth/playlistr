@@ -8,8 +8,8 @@ import webbrowser
 import spotipy.util as util
 from json.decoder import JSONDecodeError
 
-def selectTracks(results, songBatchTotal):
-    songs = random.sample(results['items'], k=songBatchTotal)
+def selectTracks(results):
+    songs = random.sample(results['items'], k=5)
     songList = []
     for song in songs:
         songList.append(song['track']['id'])
@@ -19,13 +19,12 @@ def gatherTodaysSongs():
     results = spotifyObject.current_user_saved_tracks(1) #initial small call to get total
     trackTotal = results['total']
     batchNumber = math.ceil(trackTotal / 50)
-    songBatchTotal = math.ceil(50 / batchNumber)
 
     songList = []
 
     for batch in range(batchNumber):
         results = spotifyObject.current_user_saved_tracks(50, batch*50)
-        batchResult = selectTracks(results, songBatchTotal)
+        batchResult = selectTracks(results)
         songList = songList + batchResult
     return songList
 
