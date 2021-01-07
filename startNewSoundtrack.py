@@ -9,7 +9,8 @@ import spotipy.util as util
 from json.decoder import JSONDecodeError
 
 def selectTracks(results):
-    songs = random.sample(results['items'], k=5)
+    songBatchNum = len(results['items']) / 2 if len(results['items']) < 5 else 5
+    songs = random.sample(results['items'], k=songBatchNum)
     songList = []
     for song in songs:
         songList.append(song['track']['id'])
