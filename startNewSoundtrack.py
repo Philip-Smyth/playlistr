@@ -8,6 +8,11 @@ import webbrowser
 import spotipy.util as util
 from json.decoder import JSONDecodeError
 
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
 def selectTracks(results):
     songBatchNum = len(results['items']) / 2 if len(results['items']) < 5 else 5
     songs = random.sample(results['items'], k=songBatchNum)
@@ -19,12 +24,12 @@ def selectTracks(results):
 def gatherTodaysSongs():
     results = spotifyObject.current_user_saved_tracks(1) #initial small call to get total
     trackTotal = results['total']
-    batchNumber = math.ceil(trackTotal / 50)
+    batchNumber = math.ceil(trackTotal / 15)
 
     songList = []
 
     for batch in range(batchNumber):
-        results = spotifyObject.current_user_saved_tracks(50, batch*50)
+        results = spotifyObject.current_user_saved_tracks(15, batch*15)
         batchResult = selectTracks(results)
         songList = songList + batchResult
     return songList
@@ -62,19 +67,29 @@ for i, item in enumerate(playlists['items']):
         playlistId = item['id']
 
 if playlistPresent:
-    print("Hello soundtrack, sadly we need to remove your tracks to make room for new ones")
     songList = gatherTodaysSongs()
-    spotifyObject.playlist_replace_items(playlistId, songList)
+    songListLength = len(songList)
+    spotifyObject.playlist_replace_items(playlistId, [])
+    if songListLength >= 100:
+        chunkedSongs = list(chunks(songList, 100))
+    for i, chunk in enumerate(chunkedSongs):
+        spotifyObject.playlist_add_items(playlistId, chunkedSongs[i])
+
 else:
-    print ("Okie dokie, lets create todays soundtrack")
+    # Create the soundtrack for the first time
     spotifyObject.user_playlist_create(user_id, "DailySoundtrack") #creating a soundtrack
     playlists = spotifyObject.current_user_playlists(limit=50)
     for i, item in enumerate(playlists['items']):
         if 'DailySoundtrack' in item['name']:
             playlistId = item['id']
-    songList = gatherTodaysSongs()
-    spotifyObject.playlist_add_items(playlistId, songList)
 
+    # Add to the playlist for today
+    songList = gatherTodaysSongs()
+    songListLength = len(songList)
+    if songListLength >= 100:
+        chunkedSongs = list(chunks(songList, 100))
+    for i, chunk in enumerate(chunkedSongs):
+        spotifyObject.playlist_add_items(playlistId, chunkedSongs[i])
 #
 # Next steps:
 # Next thing will be to add the song Id's to a DB, and generate the new list
